@@ -1,0 +1,105 @@
+# ==============================
+# Core LangChain
+# ==============================
+langchain
+langchain-core
+langchain-community
+langchain-text-splitters
+
+# ==============================
+# LLM Providers
+# ==============================
+langchain-openai
+langchain-mistralai
+openai
+mistralai
+
+# ==============================
+# Embeddings
+# ==============================
+sentence-transformers
+tiktoken
+
+# ==============================
+# Vector Database
+# ==============================
+chromadb
+faiss-cpu
+
+# ==============================
+# Document Loaders
+# ==============================
+pypdf
+pymupdf
+pdfplumber
+python-docx
+beautifulsoup4
+lxml
+
+# ==============================
+# OCR (Optional)
+# ==============================
+pytesseract
+Pillow
+
+# ==============================
+# Data Handling
+# ==============================
+pandas
+numpy
+
+# ==============================
+# Environment Variables
+# ==============================
+python-dotenv
+
+# ==============================
+# FastAPI Backend
+# ==============================
+fastapi
+uvicorn
+python-multipart
+
+# ==============================
+# Validation
+# ==============================
+pydantic
+
+# ==============================
+# HTTP Requests
+# ==============================
+requests
+httpx
+
+# ==============================
+# Utilities
+# ==============================
+tqdm
+typing-extensions
+
+# ==============================
+# Logging
+# ==============================
+loguru
+
+# ==============================
+# Token Counting
+# ==============================
+tokenizers
+
+# ==============================
+# Async Support
+# ==============================
+aiofiles
+
+# ==============================
+# Optional Web Scraping
+# ==============================
+selenium
+playwright
+
+# ==============================
+# Optional Notebook Support
+# ==============================
+jupyter
+ipykernel
