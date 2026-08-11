@@ -60,9 +60,54 @@ def autocrop_diagram(img: PILImage.Image, threshold: int = 245, padding: int = 1
         return img
 
 
+def strip_colored_bands(
+    img: PILImage.Image,
+    white_threshold: int = 240,
+    min_band_px: int = 20,
+) -> PILImage.Image:
+    """
+    Remove solid coloured header/footer bands from textbook page images
+    (e.g. the NCERT green/orange chapter-header bar at the top of the page).
+
+    Scans row-by-row from the top until a row with ≥ 25 % near-white pixels
+    is found, indicating that diagram content has started, and mirrors the
+    same scan from the bottom to strip footer bands.
+    """
+    try:
+        arr  = np.array(img.convert("RGB"))
+        h, w = arr.shape[:2]
+
+        # ── Top band ─────────────────────────────────────────────────────────
+        top_cut = 0
+        for i in range(h):
+            white_frac = float(np.mean(np.all(arr[i] >= white_threshold, axis=1)))
+            if white_frac >= 0.25:      # first row with meaningful white content
+                top_cut = i
+                break
+
+        # ── Bottom band ───────────────────────────────────────────────────────
+        bottom_cut = h
+        for i in range(h - 1, -1, -1):
+            white_frac = float(np.mean(np.all(arr[i] >= white_threshold, axis=1)))
+            if white_frac >= 0.25:
+                bottom_cut = i + 1
+                break
+
+        if top_cut >= min_band_px:
+            img = img.crop((0, top_cut, w, bottom_cut))
+        elif bottom_cut <= h - min_band_px:
+            img = img.crop((0, 0, w, bottom_cut))
+
+        return img
+    except Exception as e:
+        logger.debug(f"strip_colored_bands failed: {e}")
+        return img
+
+
 def load_and_crop(image_path: str) -> PILImage.Image | None:
     """
-    Load an image from disk and auto-crop white borders.
+    Load an image from disk, strip coloured page-header/footer bands,
+    then auto-crop remaining white margins.
     Returns a PIL Image, or None if loading fails.
     """
     path = Path(image_path)
@@ -70,7 +115,8 @@ def load_and_crop(image_path: str) -> PILImage.Image | None:
         return None
     try:
         img = PILImage.open(str(path)).convert("RGB")
-        return autocrop_diagram(img)
+        img = strip_colored_bands(img)   # remove NCERT chapter-header bars first
+        return autocrop_diagram(img)     # then trim remaining white margins
     except Exception as e:
         logger.error(f"Could not load image {image_path}: {e}")
         return None

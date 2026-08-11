@@ -13,6 +13,8 @@ Run with:
 import os
 import sys
 import logging
+import base64
+from io import BytesIO
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -33,6 +35,38 @@ from modules.retriever import retrieve, build_text_context, build_image_context,
 from modules.answer_generator import reformulate_question, generate_text_answer, generate_diagram_answer
 from modules.vision_pipeline import run_vision_query
 from modules.image_display import load_and_crop
+
+
+def resolve_image_path(stored_path: str, subject: str = "") -> str:
+    """
+    Return a valid absolute path to the image file.
+    The path stored in ChromaDB may be stale (project was moved/renamed).
+    Falls back to reconstructing from config.IMAGES_DIR + subject + filename.
+    """
+    if stored_path and Path(stored_path).exists():
+        return stored_path
+    # Try to recover using the current IMAGES_DIR
+    filename = Path(stored_path).name if stored_path else ""
+    if not filename:
+        return stored_path
+    # First try with the subject subfolder
+    if subject:
+        candidate = config.IMAGES_DIR / subject / filename
+        if candidate.exists():
+            return str(candidate)
+    # Walk all subfolders of IMAGES_DIR
+    for candidate in config.IMAGES_DIR.rglob(filename):
+        if candidate.exists():
+            return str(candidate)
+    return stored_path  # give up — return original (will fail gracefully later)
+
+
+def img_to_base64(pil_img: PILImage.Image) -> str:
+    """Encode a PIL Image as a base64 PNG string for inline HTML embedding."""
+    buf = BytesIO()
+    pil_img.save(buf, format="PNG")
+    return base64.b64encode(buf.getvalue()).decode("utf-8")
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PAGE CONFIG
@@ -67,18 +101,40 @@ html, body, [class*="css"] {
 .main-header h1 { font-size: 2rem; font-weight: 700; margin: 0; }
 .main-header p  { font-size: 1rem; opacity: 0.85; margin: 0.5rem 0 0; }
 
-.diagram-box {
-    background: linear-gradient(135deg, #f8f9ff 0%, #e8ecff 100%);
-    border: 2px solid #667eea;
-    border-radius: 12px;
-    padding: 1rem;
-    margin: 0.5rem 0;
+.img-card {
+    border-radius: 14px;
+    overflow: hidden;
+    margin: 1rem 0;
+    box-shadow: 0 6px 28px rgba(0,0,0,0.35);
+    border: 1px solid rgba(102,126,234,0.30);
+    background: #0e0e1c;
 }
-.diagram-label {
+.img-card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 0.6rem 1rem;
+    color: #fff;
     font-weight: 600;
-    color: #667eea;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
+    font-size: 0.875rem;
+    letter-spacing: 0.01em;
+}
+.img-card-body {
+    background: #ffffff;
+    text-align: center;
+    padding: 0.75rem;
+}
+.img-card-body img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+    border-radius: 4px;
+}
+.img-card-footer {
+    padding: 0.45rem 1rem;
+    background: rgba(255,255,255,0.03);
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.50);
+    border-top: 1px solid rgba(255,255,255,0.07);
 }
 
 .stChatMessage { border-radius: 12px !important; }
@@ -180,19 +236,27 @@ for msg in st.session_state.messages:
         # Show images inline (for assistant messages)
         if images:
             for img_info in images:
-                st.markdown(f'<div class="diagram-box"><div class="diagram-label">📷 Diagram: {img_info.get("caption", "Textbook Figure")}</div></div>', unsafe_allow_html=True)
-                img_path = img_info.get("image_path", "")
+                img_path  = resolve_image_path(
+                    img_info.get("image_path", ""),
+                    img_info.get("subject", ""),
+                )
+                caption_h = img_info.get("caption", "Textbook Figure")
+                src_h     = img_info.get("source_file", "?")
+                pg_h      = img_info.get("page", "?")
+                sub_h     = img_info.get("subject", "?")
                 if img_path and Path(img_path).exists():
                     try:
-                        img = load_and_crop(img_path)
-                        if img:
-                            st.image(img, caption=img_info.get("caption", ""), use_container_width=True)
+                        pil_img = load_and_crop(img_path)
+                        if pil_img:
+                            b64 = img_to_base64(pil_img)
+                            st.markdown(f"""<div class="img-card">
+  <div class="img-card-header">📷 {caption_h}</div>
+  <div class="img-card-body"><img src="data:image/png;base64,{b64}" /></div>
+  <div class="img-card-footer">📖 {sub_h.title()} &nbsp;·&nbsp; {src_h} &nbsp;·&nbsp; Page {pg_h}</div>
+</div>""", unsafe_allow_html=True)
                     except Exception:
                         st.warning(f"Could not display image: {img_path}")
-                src = img_info.get("source_file", "?")
-                pg  = img_info.get("page", "?")
-                sub = img_info.get("subject", "?")
-                st.caption(f"📖 {sub.title()} | {src} | Page {pg}")
+
 
         st.markdown(content)
 
@@ -226,20 +290,26 @@ if question:
                 if image_docs:
                     for img_doc in image_docs:
                         m        = img_doc.metadata
-                        img_path = m.get("image_path", "")
+                        img_path = resolve_image_path(
+                            m.get("image_path", ""),
+                            m.get("subject", ""),
+                        )
                         caption  = m.get("caption", "Textbook Figure")
+                        src = m.get("source_file", "?")
+                        pg  = m.get("page", "?")
+                        sub = m.get("subject", "?")
                         if img_path and Path(img_path).exists():
-                            st.markdown(f'<div class="diagram-box"><div class="diagram-label">📷 {caption}</div></div>', unsafe_allow_html=True)
                             try:
-                                img = load_and_crop(img_path)
-                                if img:
-                                    st.image(img, caption=caption, use_container_width=True)
+                                pil_img = load_and_crop(img_path)
+                                if pil_img:
+                                    b64 = img_to_base64(pil_img)
+                                    st.markdown(f"""<div class="img-card">
+  <div class="img-card-header">📷 {caption}</div>
+  <div class="img-card-body"><img src="data:image/png;base64,{b64}" /></div>
+  <div class="img-card-footer">📖 {sub.title()} &nbsp;·&nbsp; {src} &nbsp;·&nbsp; Page {pg}</div>
+</div>""", unsafe_allow_html=True)
                             except Exception as img_err:
                                 st.warning(f"Image unavailable: {img_err}")
-                            src = m.get("source_file", "?")
-                            pg  = m.get("page", "?")
-                            sub = m.get("subject", "?")
-                            st.caption(f"📖 {sub.title()} | {src} | Page {pg}")
                             displayed_images.append(m)
 
                 # Step 4: Generate answer
