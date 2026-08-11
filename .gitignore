@@ -15,9 +15,14 @@ __pycache__/
 # database_images/    ← included so collaborators get extracted diagrams
 # processed_files.json ← included for incremental ingestion tracking
 
-# Textbooks / Documents (Ignore large PDFs but keep the folder if needed)
-Document Loaders/*
-!Document Loaders/.gitkeep
+# Textbooks / Documents
+# Allow subject subfolders and their contents to be tracked
+!Document Loaders/Physics/
+!Document Loaders/Physics/**
+!Document Loaders/biology/
+!Document Loaders/biology/**
+!Document Loaders/chemisty/
+!Document Loaders/chemisty/**
 
 # OS specific files
 .DS_Store
