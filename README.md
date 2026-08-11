@@ -1,8 +1,8 @@
-# GSEB Class 12 Multimodal AI Tutor !🎓
+# GSEB Class 12 Multimodal AI Tutor !
 
 A powerful, multimodal Retrieval-Augmented Generation (RAG) educational assistant tailored for GSEB Class 12 students (Physics, Chemistry, and Biology). This project leverages Mistral AI, ChromaDB, and LangChain to provide highly accurate answers and intelligently retrieve inline diagrams from textbook PDFs.
 
-## ✨ Features
+##  Features
 - **Multimodal RAG Pipeline**: Extracts both text and diagrams/images from PDF textbooks.
 - **Context-Aware Answers**: Remembers chat history (up to 10 turns) to reformulate follow-up questions accurately.
 - **Diagram & Image Retrieval**: Automatically retrieves and displays original textbook diagrams when users ask visually oriented questions (e.g., "Show me the diagram of a human heart").
