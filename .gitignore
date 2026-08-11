@@ -11,9 +11,9 @@ __pycache__/
 *$py.class
 
 # Application Data & State
-chroma_db/
-database_images/
-processed_files.json
+# chroma_db/          ← included so collaborators get the pre-built database
+# database_images/    ← included so collaborators get extracted diagrams
+# processed_files.json ← included for incremental ingestion tracking
 
 # Textbooks / Documents (Ignore large PDFs but keep the folder if needed)
 Document Loaders/*
